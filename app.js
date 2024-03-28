@@ -1,18 +1,14 @@
 import * as fs from "node:fs/promises";
-import { CREATE_FILE } from "./commands.js";
-(async () => {
-  const createFile = async (path) => {
-    try {
-      const existingFileHandle = await fs.open(path, "r");
-      existingFileHandle.close();
-      return console.log(`The file ${path} already exists.`);
-    } catch (e) {
-      const newFileHandle = await fs.open(path, "w");
-      console.log("A new file was successfully created.");
-      newFileHandle.close();
-    }
-  };
+import {
+  CREATE_FILE,
+  DELETE_FILE,
+  ADD_TO_FILE,
+  GetFilePath,
+  RENAME_FILE,
+} from "./commands.js";
+import { events } from "./handlers.js";
 
+(async () => {
   const commandFileHandler = await fs.open("./creator.txt", "r");
 
   commandFileHandler.on("change", async () => {
@@ -24,8 +20,31 @@ import { CREATE_FILE } from "./commands.js";
 
     const command = buff.toString("utf-8");
     if (command.includes(CREATE_FILE)) {
-      const filePath = command.substring(CREATE_FILE.length + 1);
-      createFile(filePath);
+      const filePath = GetFilePath(command);
+
+      events.emit("create", filePath);
+    }
+    if (command.includes(DELETE_FILE)) {
+      const filePath = GetFilePath(command);
+      events.emit("delete", filePath);
+    }
+    if (command.includes(RENAME_FILE)) {
+      const index = command.indexOf(" to ");
+      console.log(index)
+      const oldPath = command.substring(RENAME_FILE.length + 1, index);
+      console.log(oldPath);
+      const newPath = command.substring(index + 4);
+      console.log(newPath);
+
+      events.emit("rename", oldPath, newPath);
+    }
+    if (command.includes(ADD_TO_FILE)) {
+      const index = command.indexOf(" with content: ");
+      const filePath = command.substring(ADD_TO_FILE.length + 1, index);
+      // const oldPath = command.substring(RENAME_FILE.length + 1, index);
+      const content = command.substring(index + 15);
+
+      events.emit("write", filePath, content);
     }
   });
 
